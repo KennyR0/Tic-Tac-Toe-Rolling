@@ -18,9 +18,10 @@ class MenuPrincipal:
         self.window.configure(bg=COLORES['bg'])
         
         self.modo_seleccionado = None
+        self.pantalla_actual = 'principal'  # 'principal' o 'nombres'
+        self.en_transicion = False  # Bandera para evitar problemas durante transiciones
         self.base_size = (400, 500)
         self.last_size = (0, 0)
-        self.pantalla_actual = 'principal'  # Track current screen
 
         self.menu_frame = tk.Frame(window, bg=COLORES['bg'])
         self.menu_frame.pack(expand=True, fill='both', padx=20, pady=20)
@@ -69,86 +70,95 @@ class MenuPrincipal:
                  activebackground="#5a5a7a", command=self.window.quit).pack(pady=int(20*s))
 
     def mostrar_pantalla_nombres(self, modo):
+        self.en_transicion = True
         self._limpiar_frame()
         self.pantalla_actual = 'nombres'
         self.modo_seleccionado = modo
+        
+        # Aumentar tamaño de ventana para pantalla de nombres
+        self.window.geometry("500x450")
+        
         s = self._calcular_escala()
         
-        self._crear_label(" Ingresa los nombres ", int(24*s), True, 'x').pack(pady=int(15*s))
+        self._crear_label(" Ingresa los nombres ", int(28*s), True, 'x').pack(pady=int(20*s))
         
         jugadores = ['Jugador 1 (X)', 'Jugador 2 (O)'] if modo == "1vs1" else ['Jugador (X)']
         self.entries = {}
         
         for jugador in jugadores:
-            self._crear_label(jugador, int(14*s)).pack()
-            entry = tk.Entry(self.menu_frame, font=('Arial', int(12*s)), width=30)
-            entry.pack(pady=int(10*s))
+            self._crear_label(jugador, int(16*s)).pack()
+            entry = tk.Entry(self.menu_frame, font=('Arial', int(14*s)), width=25)
+            entry.pack(pady=int(12*s))
             self.entries[jugador] = entry
         
         # Selector de dificultad para modo vs IA
         if modo == "vs_ia":
-            self._crear_label("Dificultad de la IA:", int(14*s), True).pack(pady=(int(15*s), int(5*s)))
+            self._crear_label("Dificultad de la IA:", int(16*s), True).pack(pady=(int(20*s), int(8*s)))
             
             self.dificultad_var = tk.StringVar(value='medio')
             frame_dif = tk.Frame(self.menu_frame, bg=COLORES['bg'])
-            frame_dif.pack(pady=int(5*s))
+            frame_dif.pack(pady=int(8*s))
             
             dificultades = [('Fácil', 'facil'), ('Medio', 'medio'), ('Difícil', 'dificil')]
             for texto, valor in dificultades:
                 rb = tk.Radiobutton(
                     frame_dif, text=texto, variable=self.dificultad_var, value=valor,
-                    font=('Arial', int(12*s)), bg=COLORES['bg'], fg=COLORES['texto'],
+                    font=('Arial', int(14*s)), bg=COLORES['bg'], fg=COLORES['texto'],
                     selectcolor=COLORES['btn'], activebackground=COLORES['bg'],
                     activeforeground=COLORES['texto']
                 )
-                rb.pack(side='left', padx=int(10*s))
+                rb.pack(side='left', padx=int(12*s))
         
         color = 'x' if modo == "1vs1" else 'o'
         hover = "#c73850" if modo == "1vs1" else "#3a9fc4"
-        self._crear_boton("Iniciar Juego", int(16*s), 20, color, hover, 
-                         self.iniciar_juego).pack(pady=int(15*s))
+        self._crear_boton("Iniciar Juego", int(18*s), 22, color, hover, 
+                         self.iniciar_juego).pack(pady=int(20*s))
+        
+        self.en_transicion = False
     
     def _limpiar_frame(self):
         for widget in self.menu_frame.winfo_children():
             widget.destroy()
     
     def on_resize(self, event):
+        # Evitar recrear durante transiciones
+        if self.en_transicion:
+            return
+        
         current = (self.window.winfo_width(), self.window.winfo_height())
         if abs(current[0] - self.last_size[0]) > 50 or abs(current[1] - self.last_size[1]) > 50:
             self.last_size = current
             # Solo recrear si estamos en la pantalla principal
             if self.pantalla_actual == 'principal':
                 self.crear_pantalla_principal()
+            # No recrear pantalla de nombres para evitar problemas
 
     def iniciar_juego(self):
         dificultad = getattr(self, 'dificultad_var', None)
         dificultad = dificultad.get() if dificultad else 'medio'
         
         # Obtener nombres de los jugadores
-        nombres = {}
-        for key, entry in self.entries.items():
-            nombre = entry.get().strip()
-            if 'X' in key or '1' in key:
-                nombres['X'] = nombre if nombre else 'Jugador X'
-            else:
-                nombres['O'] = nombre if nombre else 'Jugador O'
-        
-        # Si es modo vs IA, el jugador O es la IA
-        if self.modo_seleccionado == 'vs_ia':
-            nombres['O'] = 'IA'
+        if self.modo_seleccionado == "1vs1":
+            nombre_x = self.entries['Jugador 1 (X)'].get() or "Jugador 1"
+            nombre_o = self.entries['Jugador 2 (O)'].get() or "Jugador 2"
+        else:
+            nombre_x = self.entries['Jugador (X)'].get() or "Jugador"
+            nombre_o = "IA"
         
         self.window.destroy()
-        InterfazJuego(tk.Tk(), self.modo_seleccionado, dificultad, nombres).window.mainloop()
+        InterfazJuego(tk.Tk(), self.modo_seleccionado, dificultad, nombre_x, nombre_o).window.mainloop()
 
 class InterfazJuego:
-    def __init__(self, window, modo="1vs1", dificultad='medio', nombres=None):
+    def __init__(self, window, modo="1vs1", dificultad='medio', nombre_x="Jugador 1", nombre_o="Jugador 2"):
         self.window = window
         self.window.title("Tres en Raya Infinito")
         self.window.resizable(True, True)
+        self.window.state('zoomed')  # Pantalla completa en Windows
         self.modo = modo
         
-        # Guardar nombres de jugadores
-        self.nombres = nombres if nombres else {'X': 'Jugador X', 'O': 'Jugador O'}
+        # Nombres de los jugadores
+        self.nombre_x = nombre_x
+        self.nombre_o = nombre_o
         
         # Inicializar juego
         self.juego = TicTacToe()
@@ -166,34 +176,38 @@ class InterfazJuego:
         
         self.window.configure(bg=self.bg_color)
         
+        # Frame contenedor para centrar todo
+        self.main_frame = tk.Frame(window, bg=self.bg_color)
+        self.main_frame.pack(expand=True)
+        
         # Título
         self.label = tk.Label(
-            window, 
-            text=f"Turno de {self.nombres['X']}", 
-            font=('Arial', 18, 'bold'),
+            self.main_frame, 
+            text=f"Turno de {self.nombre_x} (X)", 
+            font=('Arial', 24, 'bold'),
             bg=self.bg_color,
             fg=self.x_color
         )
-        self.label.grid(row=0, column=0, columnspan=3, pady=10)
+        self.label.grid(row=0, column=0, columnspan=3, pady=12)
         
         # Info del modo rolling
         max_fichas = self.juego.numero_maximo_de_mov
         self.info_label = tk.Label(
-            window, 
+            self.main_frame, 
             text=f"Máximo {max_fichas} fichas por jugador", 
-            font=('Arial', 10),
+            font=('Arial', 12),
             bg=self.bg_color,
             fg=self.text_color
         )
-        self.info_label.grid(row=1, column=0, columnspan=3, pady=(0, 5))
+        self.info_label.grid(row=1, column=0, columnspan=3, pady=(0, 8))
         
         # Crear botones del tablero
         self.buttons = []
         for i in range(9):
             btn = tk.Button(
-                window,
+                self.main_frame,
                 text="",
-                font=('Arial', 32, 'bold'),
+                font=('Arial', 40, 'bold'),
                 width=4,
                 height=2,
                 bg=self.btn_color,
@@ -201,23 +215,23 @@ class InterfazJuego:
                 activebackground="#2a2a4e",
                 command=lambda idx=i: self.hacer_mov(idx)
             )
-            btn.grid(row=(i // 3) + 2, column=i % 3, padx=3, pady=3)
+            btn.grid(row=(i // 3) + 2, column=i % 3, padx=4, pady=4)
             self.buttons.append(btn)
         
         # Contador de fichas
         max_f = self.juego.numero_maximo_de_mov
         self.counter_label = tk.Label(
-            window, 
-            text=f"X: 0/{max_f}  |  O: 0/{max_f}", 
-            font=('Arial', 12),
+            self.main_frame, 
+            text=f"{self.nombre_x}: 0/{max_f}  |  {self.nombre_o}: 0/{max_f}", 
+            font=('Arial', 14),
             bg=self.bg_color,
             fg=self.text_color
         )
-        self.counter_label.grid(row=5, column=0, columnspan=3, pady=5)
+        self.counter_label.grid(row=5, column=0, columnspan=3, pady=8)
         
         # Botón de reinicio
         self.reset_btn = tk.Button(
-            window,
+            self.main_frame,
             text="Nuevo Juego",
             font=('Arial', 12),
             bg="#4a4a6a",
@@ -225,7 +239,20 @@ class InterfazJuego:
             activebackground="#5a5a7a",
             command=self.reiniciar_juego
         )
-        self.reset_btn.grid(row=6, column=0, columnspan=3, pady=10)
+        self.reset_btn.grid(row=6, column=0, columnspan=3, pady=12)
+        
+        # Botón para volver al menú
+        texto_menu = "Cambiar Dificultad" if self.modo == "vs_ia" else "Volver al Menú"
+        self.menu_btn = tk.Button(
+            self.main_frame,
+            text=texto_menu,
+            font=('Arial', 12),
+            bg="#4a4a6a",
+            fg=self.text_color,
+            activebackground="#5a5a7a",
+            command=self.volver_al_menu
+        )
+        self.menu_btn.grid(row=7, column=0, columnspan=3, pady=5)
     
     def hacer_mov(self, casilla):
         # Usar la lógica del backend para hacer el movimiento
@@ -248,8 +275,8 @@ class InterfazJuego:
         
         # Verificar ganador
         combo_ganador = self.juego.verificar_ganador(self.juego.jugador_actual)
+        nombre_ganador = self.nombre_x if self.juego.jugador_actual == 'X' else self.nombre_o
         if combo_ganador:
-            nombre_ganador = self.nombres[self.juego.jugador_actual]
             self.label.config(text=f"¡{nombre_ganador} gana! 🎉", fg=color_actual)
             # Resaltar las fichas ganadoras
             for i in combo_ganador:
@@ -261,13 +288,14 @@ class InterfazJuego:
         # Cambiar turno
         self.juego.cambiar_turno()
         next_color = self.x_color if self.juego.jugador_actual == 'X' else self.o_color
-        nombre_turno = self.nombres[self.juego.jugador_actual]
-        self.label.config(text=f"Turno de {nombre_turno}", fg=next_color)
+        nombre_turno = self.nombre_x if self.juego.jugador_actual == 'X' else self.nombre_o
+        simbolo = self.juego.jugador_actual
+        self.label.config(text=f"Turno de {nombre_turno} ({simbolo})", fg=next_color)
         
         # Actualizar contador
         x_count, o_count = self.juego.obtener_conteo_fichas()
         max_f = self.juego.numero_maximo_de_mov
-        self.counter_label.config(text=f"X: {x_count}/{max_f}  |  O: {o_count}/{max_f}")
+        self.counter_label.config(text=f"{self.nombre_x}: {x_count}/{max_f}  |  {self.nombre_o}: {o_count}/{max_f}")
         
         # Si es modo vs IA y es turno de la IA, hacer movimiento
         if self.ia and self.juego.jugador_actual == 'O':
@@ -297,9 +325,16 @@ class InterfazJuego:
         self.juego.reiniciar()
         for btn in self.buttons:
             btn.config(text="", state=tk.NORMAL, fg=self.text_color, bg=self.btn_color)
-        self.label.config(text=f"Turno de {self.nombres['X']}", fg=self.x_color)
+        self.label.config(text=f"Turno de {self.nombre_x} (X)", fg=self.x_color)
         max_f = self.juego.numero_maximo_de_mov
-        self.counter_label.config(text=f"X: 0/{max_f}  |  O: 0/{max_f}")
+        self.counter_label.config(text=f"{self.nombre_x}: 0/{max_f}  |  {self.nombre_o}: 0/{max_f}")
+    
+    def volver_al_menu(self):
+        """Cierra el juego actual y abre el menú principal"""
+        self.window.destroy()
+        root = tk.Tk()
+        MenuPrincipal(root)
+        root.mainloop()
 
 
 if __name__ == '__main__':

@@ -177,9 +177,8 @@ class IA:
         return mejor_casilla
     
     def _minimax(self, casilla, jugador, profundidad, es_maximizando):
-        """Minimax adaptado para rolling (profundidad limitada)"""
-        tablero, _ = self.juego.simular_movimiento(casilla, jugador)
         
+        tablero, _ = self.juego.simular_movimiento(casilla, jugador)
         # Verificar estados terminales
         if self._hay_ganador(tablero, self.simbolo):
             return 10 - profundidad
@@ -215,7 +214,7 @@ class IA:
         return False
     
     def _evaluar_tablero(self, tablero):
-        """Evalúa posición del tablero (heurística simple)"""
+        """Evalúa posición del tablero"""
         puntaje = 0
         for combo in self.juego.win_combinations:
             mis_fichas = sum(1 for i in combo if tablero[i] == self.simbolo)
