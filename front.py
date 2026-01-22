@@ -63,7 +63,7 @@ class MenuPrincipal:
         self._crear_boton(" 1 vs 1 ", int(16*s), btn_w, 'x', "#c73850",
                          lambda: self.mostrar_pantalla_nombres("1vs1")).pack(pady=int(8*s))
         self._crear_boton("Un Jugador", int(16*s), btn_w, 'o', "#3a9fc4",
-                         lambda: self.mostrar_pantalla_nombres("vs_ia")).pack(pady=int(8*s))
+                         lambda: self.mostrar_pantalla_nombres("vs_computadora")).pack(pady=int(8*s))
         
         tk.Button(self.menu_frame, text="Salir", font=('Arial', int(12*s)),
                  width=int(10*s), bg=COLORES['acento'], fg=COLORES['texto'],
@@ -92,8 +92,8 @@ class MenuPrincipal:
             self.entries[jugador] = entry
         
         # Selector de dificultad para modo vs IA
-        if modo == "vs_ia":
-            self._crear_label("Dificultad de la IA:", int(16*s), True).pack(pady=(int(20*s), int(8*s)))
+        if modo == "vs_computadora":
+            self._crear_label("Dificultad de la Computadora:", int(16*s), True).pack(pady=(int(20*s), int(8*s)))
             
             self.dificultad_var = tk.StringVar(value='medio')
             frame_dif = tk.Frame(self.menu_frame, bg=COLORES['bg'])
@@ -164,7 +164,7 @@ class InterfazJuego:
         self.juego = TicTacToe()
         
         # Inicializar IA si es modo vs_ia
-        self.ia = IA(self.juego, 'O', dificultad) if modo == "vs_ia" else None
+        self.ia = IA(self.juego, 'O', dificultad) if modo == "vs_computadora" else None
         
         # Colores
         self.bg_color = "#1a1a2e"
@@ -242,7 +242,7 @@ class InterfazJuego:
         self.reset_btn.grid(row=6, column=0, columnspan=3, pady=12)
         
         # Botón para volver al menú
-        texto_menu = "Cambiar Dificultad" if self.modo == "vs_ia" else "Volver al Menú"
+        texto_menu = "Cambiar Dificultad" if self.modo == "vs_computadora" else "Volver al Menú"
         self.menu_btn = tk.Button(
             self.main_frame,
             text=texto_menu,
