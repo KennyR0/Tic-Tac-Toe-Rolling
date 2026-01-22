@@ -143,7 +143,7 @@ class MenuPrincipal:
             nombre_o = self.entries['Jugador 2 (O)'].get() or "Jugador 2"
         else:
             nombre_x = self.entries['Jugador (X)'].get() or "Jugador"
-            nombre_o = "IA"
+            nombre_o = "CPU"
         
         self.window.destroy()
         InterfazJuego(tk.Tk(), self.modo_seleccionado, dificultad, nombre_x, nombre_o).window.mainloop()
